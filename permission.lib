@@ -11,23 +11,23 @@ function check_exists() {
 }
 
 # Function to set read, write, and execute permissions for the owner
-# Usage: set_owner_permissions "file_or_directory"
-function set_owner_permissions() {
+# Usage: permission.owner "file_or_directory"
+function permission.owner() {
     check_exists "$1" || return 1
     chmod u+rwx "$1"
     echo "Set read, write, and execute permissions for the owner on '$1'."
 }
 
 # Function to set read and execute permissions for the group
-# Usage: set_group_permissions "file_or_directory"
-function set_group_permissions() {
+# Usage: permission.group "file_or_directory"
+function permission.group() {
     check_exists "$1" || return 1
     chmod g+rx "$1"
     echo "Set read and execute permissions for the group on '$1'."
 }
 
 # Function to set read-only permissions for others
-# Usage: set_others_permissions "file_or_directory"
+# Usage: permission.others "file_or_directory"
 function set_others_permissions() {
     check_exists "$1" || return 1
     chmod o+r "$1"
