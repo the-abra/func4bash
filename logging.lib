@@ -36,7 +36,7 @@ function log.message() {
     echo -e "${RESET_COLOR} [${color}$level${RESET_COLOR}]${color}>${RESET_COLOR} $message"
 }
 
-function log.submessage() {
+function log.sub() {
     echo -e "\t${RESET_COLOR}${COLOR_GENERIC}o \e[0;37m$1" && sleep 0.2
 }
 
