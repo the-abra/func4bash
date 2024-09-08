@@ -1,0 +1,55 @@
+#!/bin/bash
+# sysinfo.lib - Functions for gathering system information
+
+# Functions
+
+# Get the hostname of the system
+info.hostname() {
+    cat /etc/hostname
+}
+
+# Get the operating system name and version
+info.os() {
+    uname -srm
+}
+
+# Get the total and free memory
+info.memory() {
+    free -h | awk 'NR==2{print "Total Memory: "$2", Free Memory: "$4}'
+}
+
+# Get the total and available disk space
+info.disk() {
+    df -h | awk '$NF=="/"{print "Total Disk Space: "$2", Available Disk Space: "$4}'
+}
+
+# Get CPU information
+info.cpu() {
+    lscpu | awk -F: '/Model name|Socket(s)|Core\(s\) per socket|Thread(s) per core/{print $1": "$2}'
+}
+
+# Get system uptime
+info.uptime() {
+    uptime -p
+}
+
+# Get the list of installed packages
+get_installed_packages() {
+    if command -v dpkg &> /dev/null; then
+        dpkg --list | awk '{print $2}' | tail -n +6
+    elif command -v pacman &> /dev/null; then
+        pacman -Qq
+    else
+        echo "No known package manager found."
+    fi
+}
+
+# Example usage:
+# echo "Hostname: $(get_hostname)"
+# echo "OS Info: $(get_os_info)"
+# echo "Memory Info: $(get_memory_info)"
+# echo "Disk Space: $(get_disk_space)"
+# echo "CPU Info: $(get_cpu_info)"
+# echo "System Uptime: $(get_system_uptime)"
+# echo "Installed Packages: $(get_installed_packages)"
+

@@ -1,0 +1,74 @@
+#!/bin/bash
+# textprocessing.lib - Functions for common text processing tasks
+
+# Functions
+
+# Convert text to uppercase
+to_upper() {
+    echo "$1" | tr '[:lower:]' '[:upper:]'
+}
+
+# Convert text to lowercase
+to_lower() {
+    echo "$1" | tr '[:upper:]' '[:lower:]'
+}
+
+# Capitalize the first letter of each word
+capitalize_words() {
+    echo "$1" | sed 's/\b\(.\)/\u\1/g'
+}
+
+# Count the number of words in a string
+word_count() {
+    echo "$1" | wc -w
+}
+
+# Count the number of characters in a string
+char_count() {
+    echo -n "$1" | wc -c
+}
+
+# Reverse a string
+reverse_string() {
+    echo "$1" | rev
+}
+
+# Replace all occurrences of a substring in a string
+replace_substring() {
+    local string="$1"
+    local search="$2"
+    local replace="$3"
+    echo "${string//$search/$replace}"
+}
+
+# Check if a string contains a substring
+contains_substring() {
+    local string="$1"
+    local substring="$2"
+    if [[ "$string" == *"$substring"* ]]; then
+        return 0  # True
+    else
+        return 1  # False
+    fi
+}
+
+# Split a string by a delimiter and print each part on a new line
+split_string() {
+    local string="$1"
+    local delimiter="$2"
+    IFS="$delimiter" read -ra parts <<< "$string"
+    for part in "${parts[@]}"; do
+        echo "$part"
+    done
+}
+
+# Example usage:
+# to_upper "hello world"
+# to_lower "HELLO WORLD"
+# capitalize_words "hello world"
+# word_count "hello world"
+# char_count "hello world"
+# reverse_string "hello world"
+# replace_substring "hello world" "world" "universe"
+# contains_substring "hello world" "world" && echo "Found" || echo "Not found"
+# split_string "hello,world,how,are,you" ","

@@ -1,0 +1,89 @@
+#!/bin/bash
+
+# json.lib - A Bash library for JSON processing using jq
+
+# Function to check if jq is installed
+function check_jq_installed() {
+    if ! command -v jq &> /dev/null; then
+        echo "jq is not installed. Please install jq to use this library."
+        return 1
+    fi
+}
+
+# Function to extract a value from a JSON string by key
+# Usage: json_get_value '{"key": "value"}' "key"
+function json_get_value() {
+    local json_string="$1"
+    local key="$2"
+
+    echo "$json_string" | jq -r --arg key "$key" '.[$key]'
+}
+
+# Function to parse a JSON file and extract a value by key
+# Usage: json_get_value_from_file "file.json" "key"
+function json_get_value_from_file() {
+    local file_path="$1"
+    local key="$2"
+
+    jq -r --arg key "$key" '.[$key]' "$file_path"
+}
+
+# Function to add a new key-value pair to a JSON string
+# Usage: json_add_key_value '{"key1": "value1"}' "key2" "value2"
+function json_add_key_value() {
+    local json_string="$1"
+    local key="$2"
+    local value="$3"
+
+    echo "$json_string" | jq --arg key "$key" --arg value "$value" '.[$key] = $value'
+}
+
+# Function to remove a key from a JSON string
+# Usage: json_remove_key '{"key1": "value1", "key2": "value2"}' "key1"
+function json_remove_key() {
+    local json_string="$1"
+    local key="$2"
+
+    echo "$json_string" | jq --arg key "$key" 'del(.[$key])'
+}
+
+# Function to update a key's value in a JSON string
+# Usage: json_update_value '{"key1": "value1"}' "key1" "new_value"
+function json_update_value() {
+    local json_string="$1"
+    local key="$2"
+    local new_value="$3"
+
+    echo "$json_string" | jq --arg key "$key" --arg value "$new_value" '.[$key] = $value'
+}
+
+# Function to pretty-print a JSON string
+# Usage: json_pretty_print '{"key": "value"}'
+function json_pretty_print() {
+    local json_string="$1"
+
+    echo "$json_string" | jq .
+}
+
+# Ensure jq is installed before using the library
+check_jq_installed
+
+json.test() {
+    json_string='{"name": "John", "age": 30, "city": "New York"}'
+
+    # Get a value
+    name=$(json_get_value "$json_string" "name")
+    echo "Name: $name"
+
+    # Add a key-value pair
+    updated_json=$(json_add_key_value "$json_string" "country" "USA")
+    echo "Updated JSON: $updated_json"
+
+    # Remove a key
+    reduced_json=$(json_remove_key "$updated_json" "age")
+    echo "Reduced JSON: $reduced_json"
+
+    # Pretty print JSON
+    json_pretty_print "$reduced_json"
+
+}

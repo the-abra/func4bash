@@ -1,0 +1,61 @@
+#!/bin/bash
+# datetime.lib - Tarih ve zaman işlemleri için fonksiyonlar ve kısayollar
+
+# Varsayılan tarih ve zaman formatları
+current_date="$(date +'%Y-%m-%d')"
+current_time="$(date +'%H:%M:%S')"
+current_datetime="$(date +'%Y-%m-%d %H:%M:%S')"
+
+# Fonksiyonlar
+
+# Şu anki tarihi belirtilen formatta döndür
+get_date() {
+    date_format="${1:-'%Y-%m-%d'}"
+    date +"$date_format"
+}
+
+# Şu anki zamanı belirtilen formatta döndür
+get_time() {
+    time_format="${1:-'%H:%M:%S'}"
+    date +"$time_format"
+}
+
+# Şu anki tarihi ve zamanı belirtilen formatta döndür
+get_datetime() {
+    datetime_format="${1:-'%Y-%m-%d %H:%M:%S'}"
+    date +"$datetime_format"
+}
+
+# Belirtilen sayıda gün ekleyerek yeni bir tarih döndür
+add_days() {
+    days="${1:-0}"
+    date -d "$days days" +'%Y-%m-%d'
+}
+
+# Belirtilen sayıda gün çıkararak yeni bir tarih döndür
+subtract_days() {
+    days="${1:-0}"
+    date -d "$days days ago" +'%Y-%m-%d'
+}
+
+# Belirtilen bir tarihe gün ekleyin (Tarih formatı: YYYY-MM-DD)
+add_days_to_date() {
+    base_date="$1"
+    days="$2"
+    date -d "$base_date + $days days" +'%Y-%m-%d'
+}
+
+# Belirtilen bir tarihten gün çıkarın (Tarih formatı: YYYY-MM-DD)
+subtract_days_from_date() {
+    base_date="$1"
+    days="$2"
+    date -d "$base_date - $days days" +'%Y-%m-%d'
+}
+
+# Örnek kullanım:
+# echo "Şu anki tarih: $current_date"
+# echo "Şu anki zaman: $current_time"
+# echo "Şu anki tarih ve zaman: $current_datetime"
+# echo "Gün eklenmiş tarih: $(add_days 5)"
+# echo "Gün çıkarılmış tarih: $(subtract_days 5)"
+# echo "Belirtilen tarihe gün ekleme: $(add_days_to_date '2024-08-01' 10)"

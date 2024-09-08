@@ -1,0 +1,104 @@
+#!/bin/bash
+# fileoperations.lib - Functions for common file operations
+
+# Functions
+
+# Check if a file exists
+file_exists() {
+    if [ -f "$1" ]; then
+        return 0  # True
+    else
+        return 1  # False
+    fi
+}
+
+# Check if a directory exists
+dir_exists() {
+    if [ -d "$1" ]; then
+        return 0  # True
+    else
+        return 1  # False
+    fi
+}
+
+# Create a directory if it doesn't exist
+create_dir() {
+    if ! dir_exists "$1"; then
+        mkdir -p "$1"
+        echo "Directory created: $1"
+    else
+        echo "Directory already exists: $1"
+    fi
+}
+
+# Copy a file to a destination
+copy_file() {
+    local src="$1"
+    local dest="$2"
+    if file_exists "$src"; then
+        cp "$src" "$dest"
+        echo "File copied: $src to $dest"
+    else
+        echo "Source file does not exist: $src"
+    fi
+}
+
+# Move a file to a destination
+move_file() {
+    local src="$1"
+    local dest="$2"
+    if file_exists "$src"; then
+        mv "$src" "$dest"
+        echo "File moved: $src to $dest"
+    else
+        echo "Source file does not exist: $src"
+    fi
+}
+
+# Delete a file
+delete_file() {
+    if file_exists "$1"; then
+        rm "$1"
+        echo "File deleted: $1"
+    else
+        echo "File does not exist: $1"
+    fi
+}
+
+# List all files in a directory
+list_files() {
+    if dir_exists "$1"; then
+        ls -1 "$1"
+    else
+        echo "Directory does not exist: $1"
+    fi
+}
+
+# Count the number of lines in a file
+count_lines() {
+    if file_exists "$1"; then
+        wc -l < "$1"
+    else
+        echo "File does not exist: $1"
+    fi
+}
+
+# Count the number of words in a file
+count_words() {
+    if file_exists "$1"; then
+        wc -w < "$1"
+    else
+        echo "File does not exist: $1"
+    fi
+}
+
+# Example usage:
+# file_exists "/path/to/file" && echo "File exists" || echo "File does not exist"
+# dir_exists "/path/to/directory" && echo "Directory exists" || echo "Directory does not exist"
+# create_dir "/path/to/new/directory"
+# copy_file "/path/to/source/file" "/path/to/destination/"
+# move_file "/path/to/source/file" "/path/to/destination/"
+# delete_file "/path/to/file"
+# list_files "/path/to/directory"
+# count_lines "/path/to/file"
+# count_words "/path/to/file"

@@ -1,0 +1,56 @@
+#!/bin/bash
+
+# http.lib - A Bash library for making HTTP requests using curl
+
+# Function to check if curl is installed
+function check_curl_installed() {
+    if ! command -v curl &> /dev/null; then
+        echo "Error: curl is not installed. Please install curl to use this library."
+        return 1
+    fi
+}
+
+# Function to make a GET request
+# Usage: http.get "https://api.example.com/resource"
+function http.get() {
+    check_curl_installed || return 1
+    local url="$1"
+    
+    curl -s -X GET "$url"
+}
+
+# Function to make a POST request
+# Usage: http.post "https://api.example.com/resource" '{"key":"value"}'
+function http.post() {
+    check_curl_installed || return 1
+    local url="$1"
+    local data="$2"
+
+    curl -s -X POST -H "Content-Type: application/json" -d "$data" "$url"
+}
+
+# Function to make a PUT request
+# Usage: http.put "https://api.example.com/resource" '{"key":"value"}'
+function http.put() {
+    check_curl_installed || return 1
+    local url="$1"
+    local data="$2"
+
+    curl -s -X PUT -H "Content-Type: application/json" -d "$data" "$url"
+}
+
+# Function to make a DELETE request
+# Usage: http.delete "https://api.example.com/resource"
+function http.delete() {
+    check_curl_installed || return 1
+    local url="$1"
+
+    curl -s -X DELETE "$url"
+}
+
+
+# Example usage (you can comment these out or remove them)
+# http.get "https://api.example.com/resource"
+# http.post "https://api.example.com/resource" '{"key":"value"}'
+# http.put "https://api.example.com/resource" '{"key":"value"}'
+# http.delete "https://api.example.com/resource"

@@ -1,0 +1,76 @@
+#!/bin/bash
+# network.lib - Functions for common network operations
+
+# Functions
+
+# Check if a host is reachable (ping)
+is_host_reachable() {
+    local host="$1"
+    if ping -c 1 "$host" &> /dev/null; then
+        echo "Host is reachable: $host"
+        return 0  # True
+    else
+        echo "Host is not reachable: $host"
+        return 1  # False
+    fi
+}
+
+# Get the public IP address
+get_public_ip() {
+    curl -s https://api.ipify.org
+}
+
+# Get the local IP address
+get_local_ip() {
+    ip addr show | grep "inet\b" | awk '{print $2}' | cut -d/ -f1 | grep -v "127.0.0.1"
+}
+
+# Check if a port is open on a host using telnet
+is_port_open() {
+    local host="$1"
+    local port="$2"
+    if (echo > /dev/tcp/"$host"/"$port") &> /dev/null; then
+        echo "Port $port is open on $host"
+        return 0  # True
+    else
+        echo "Port $port is closed on $host"
+        return 1  # False
+    fi
+}
+
+# Download a file from a URL
+download_file() {
+    local url="$1"
+    local output="$2"
+    if curl -o "$output" "$url"; then
+        echo "File downloaded successfully: $output"
+    else
+        echo "Failed to download file from: $url"
+    fi
+}
+
+# Check internet connection using ping
+check_internet_connection() {
+    local test_host="8.8.8.8"  # Google DNS
+    if ping -c 1 "$test_host" &> /dev/null; then
+        echo "Internet connection is active"
+        return 0  # True
+    else
+        echo "No internet connection"
+        return 1  # False
+    fi
+}
+
+# Get the current network interface being used
+get_current_network_interface() {
+    ip route | grep '^default' | awk '{print $5}'
+}
+
+# Example usage:
+# is_host_reachable "google.com"
+# echo "Public IP: $(get_public_ip)"
+# echo "Local IP: $(get_local_ip)"
+# is_port_open "google.com" 443
+# download_file "https://example.com/file.zip" "/path/to/save/file.zip"
+# check_internet_connection
+# echo "Current network interface: $(get_current_network_interface)"

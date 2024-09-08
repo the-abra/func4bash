@@ -1,0 +1,27 @@
+progress() {
+    percent=$1
+    progress_name=$2
+
+    theov=0
+    theo=""
+    dotv=0
+    dot=""
+
+    # Build the "o" part
+    while [[ $theov -lt $percent ]]; do
+        theo="${theo}o"
+        ((theov++))
+    done
+
+    # Build the "." part
+    while [[ $dotv -lt $(( 100 - $percent )) ]]; do
+        dot="${dot}."
+        ((dotv++))
+    done
+
+    echo -ne "[$percent%] $theo$dot $progress_name\r"
+}
+
+progress_done() {
+    echo -ne "\n"
+}

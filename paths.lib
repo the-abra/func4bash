@@ -1,0 +1,53 @@
+#!/bin/bash
+# paths.lib - Sık kullanılan dosya ve dizin yollarını tanımlayan kısayollar ve fonksiyonlar
+
+# Ana dizinler
+home_dir="$HOME"
+desktop_dir="$HOME/Desktop"
+downloads_dir="$HOME/Downloads"
+documents_dir="$HOME/Documents"
+pictures_dir="$HOME/Pictures"
+music_dir="$HOME/Music"
+videos_dir="$HOME/Videos"
+
+# Sistem dizinleri
+alias www="cd /var/www"
+alias home="cd /$HOME"
+alias desktop="cd /$HOME/Desktop"
+alias docs="cd /$HOME/Documents"
+alias pictures="cd /$HOME/Pictures"
+alias music="cd /$HOME/Music"
+alias videos="cd /$HOME/Videos"
+
+
+# Uygulama dizinleri
+bash_config="$HOME/.bashrc"
+vim_config="$HOME/.vimrc"
+ssh_config="$HOME/.ssh"
+docker_dir="/var/lib/docker"
+nginx_config="/etc/nginx"
+
+# Fonksiyonlar
+
+# Belirtilen bir dizine gidin, yoksa hata mesajı verin
+goto() {
+    if [ -d "$1" ]; then
+        cd "$1" || return
+    else
+        echo "Dizin bulunamadı: $1"
+    fi
+}
+
+# Belirtilen bir dosyayı açın, yoksa hata mesajı verin
+openfile() {
+    if [ -f "$1" ]; then
+        xdg-open "$1"
+    else
+        echo "Dosya bulunamadı: $1"
+    fi
+}
+
+
+# Örnek kullanım:
+# goto "$desktop_dir"
+# openfile "$bash_config"

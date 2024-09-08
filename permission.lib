@@ -1,0 +1,91 @@
+#!/bin/bash
+
+# permissions.lib - A Bash library for managing file and directory permissions
+
+# Function to check if a file or directory exists
+function check_exists() {
+    if [ ! -e "$1" ]; then
+        echo "Error: '$1' does not exist."
+        return 1
+    fi
+}
+
+# Function to set read, write, and execute permissions for the owner
+# Usage: set_owner_permissions "file_or_directory"
+function set_owner_permissions() {
+    check_exists "$1" || return 1
+    chmod u+rwx "$1"
+    echo "Set read, write, and execute permissions for the owner on '$1'."
+}
+
+# Function to set read and execute permissions for the group
+# Usage: set_group_permissions "file_or_directory"
+function set_group_permissions() {
+    check_exists "$1" || return 1
+    chmod g+rx "$1"
+    echo "Set read and execute permissions for the group on '$1'."
+}
+
+# Function to set read-only permissions for others
+# Usage: set_others_permissions "file_or_directory"
+function set_others_permissions() {
+    check_exists "$1" || return 1
+    chmod o+r "$1"
+    echo "Set read-only permissions for others on '$1'."
+}
+
+# Function to remove all permissions for others
+# Usage: remove_others_permissions "file_or_directory"
+function remove_others_permissions() {
+    check_exists "$1" || return 1
+    chmod o-rwx "$1"
+    echo "Removed all permissions for others on '$1'."
+}
+
+# Function to set a specific permission mode
+# Usage: set_permission_mode "file_or_directory" "mode"
+function set_permission_mode() {
+    check_exists "$1" || return 1
+    chmod "$2" "$1"
+    echo "Set permission mode '$2' on '$1'."
+}
+
+# Function to view current permissions
+# Usage: view_permissions "file_or_directory"
+function view_permissions() {
+    check_exists "$1" || return 1
+    ls -ld "$1"
+}
+
+# Aliases for common permission settings
+alias set_owner='set_owner_permissions'
+alias set_group='set_group_permissions'
+alias set_others='set_others_permissions'
+alias rm_others='remove_others_permissions'
+alias perm_view='view_permissions'
+
+# Example usage (you can comment these out or remove them)
+# set_owner "example.txt"
+# set_group "example.txt"
+# set_others "example.txt"
+# remove_others_permissions "example.txt"
+# set_permission_mode "example.txt" "755"
+# view_permissions "example.txt"
+
+
+permission.test() {
+    set_owner "file.txt"
+    set_group "file.txt"
+    set_others "file.txt"
+    rm_others "file.txt"
+    set_permission_mode "file.txt" "755"
+    perm_view "file.txt"
+
+    # Or using aliases
+    set_owner "file.txt"
+    set_group "file.txt"
+    set_others "file.txt"
+    rm_others "file.txt"
+    perm_view "file.txt"
+
+}
