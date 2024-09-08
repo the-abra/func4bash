@@ -59,7 +59,7 @@ pacman -Syu --noconfirm &> /dev/null
 
 ! command -v curl >/dev/null && install_package install curl &> /dev/null
 
-curl https://raw.githubusercontent.com/func4bash/bash-utilities-library/main/colors.lib -s -o /tmp/colors.lib
+curl https://raw.githubusercontent.com/the-abra/func4bash/main/colors.lib -s -o /tmp/colors.lib
 if [[ $(cat "/tmp/colors.lib" | head -n1) =~ "# Define color variables" ]]; then
     source "/tmp/colors.lib"
 else
@@ -77,11 +77,10 @@ if [ -d /lib/func4bash ]; then
 fi
 
 cd /lib/
-git clone https://github.com/func4bash/bash-utilities-library.git > /dev/null 2>&1
-mv bash-utilities-library func4bash
+git clone https://github.com/the-abra/func4bash.git > /dev/null 2>&1
 # Check if the clone was successful
 if [ ! -d /lib/func4bash ]; then
-    errorlog "System cloning process went wrong. \ncode: git clone https://github.com/func4bash/bash-utilities-library.git"
+    errorlog "System cloning process went wrong. \ncode: git clone https://github.com/the-abra/func4bash.git"
     exit 1
 fi
 
