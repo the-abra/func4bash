@@ -3,10 +3,10 @@
 # logging.lib - A Bash library for logging with different levels
 
 # Function to check if tput is installed (for colored output)
-if ! command -v tput &> /dev/null; then
-    echo "tput is not installed. Please install ncurses to use colored output."
-    return 1
-fi
+#if ! command -v tput &> /dev/null; then
+#    echo "tput is not installed. Please install ncurses to use colored output."
+#    return 1
+#fi
 # Color definitions using ANSI escape codes
 RESET_COLOR="\033[0m"
 COLOR_GENERIC="\033[35m"   # Magenta for date
