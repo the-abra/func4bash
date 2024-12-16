@@ -1,7 +1,4 @@
 #!/bin/bash
-#!/bin/bash
-
-# CONF_FILE="config.ini" <- set at parent!
 
 # Function to get a value from a specific section in the .ini file
 inipars.get() {
@@ -45,14 +42,16 @@ inipars.update() {
 
 # Example usage
 # Get a value
+
 function inipars.ex() {
+    CONF_FILE="config.ini" # <- set at parent!
     echo "Fetching value for 'username' in section 'User':"
-    username=$(inipars_get "User" "username")
+    username=$(inipars.get "User" "username")
     echo "username=$username"
 
     # Update a value
     echo "Updating 'password' in section 'User':"
-    inipars_update "User" "password" "newpassword123"
+    inipars.update "User" "password" "newpassword123"
 
     # Display the updated file
     echo "Updated file contents:"
