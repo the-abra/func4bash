@@ -42,7 +42,7 @@ Welcome to a collection of libraries containing various functions written in Bas
 - **sysinfo.lib**: Functions for querying system status and information
 - **userinput.lib**: Getting information from the user, menus and selection operations
 - **static_process_bar.lib**: Simple process bar and effects in terminal
-- **database.lib**: Simple database operations (SQLite)
+- **sqlite3.lib**: Simple database operations (SQLite)
 - **http.lib**: Making requests such as HTTP GET, POST
 - **json.lib**: Read and write JSON data
 - **logging.lib**: Logging operations and log file management
