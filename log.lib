@@ -28,7 +28,7 @@ fi
 TIMESTAMP_FORMAT="%H:%M:%S"   # Shorter time format (HH:MM:SS)
 
 # Function to log with a specific level
-function log.message() {
+function log() {
     local level="$1"
     local color="$2"
     local message="$3"
@@ -42,19 +42,19 @@ function log.sub() {
 
 # Log levels
 function log.info() {
-    log.message "INFO" "$COLOR_INFO" "$1"
+    log "INFO" "$COLOR_INFO" "$1"
 }
 
 function log.warn() {
-    log.message "WARN" "$COLOR_WARN" "$1"
+    log "WARN" "$COLOR_WARN" "$1"
 }
 
 function log.error() {
-    log.message "ERROR" "$COLOR_ERROR" "$1"
+    log "ERROR" "$COLOR_ERROR" "$1"
 }
 
 function log.done() {
-    log.message "DONE" "$COLOR_DONE" "$1"
+    log "DONE" "$COLOR_DONE" "$1"
 }
 
 function log.setline() {
