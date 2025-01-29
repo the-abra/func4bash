@@ -72,7 +72,7 @@ alias logi='log.info'
 alias logw='log.warn'
 alias loge='log.error'
 alias logd='log.done'
-alias logsub='log.submessage'
+alias logsub='log.sub'
 
 # Example usage (you can comment these out or remove them)
 # log.info "This is an info message."
@@ -86,7 +86,7 @@ logging.test() {
     log.warn "This is a warning message."
     log.error "This is an error message."
     log.done "This task is complete."
-    log.submessage "This is a sub log."
+    log.sub "This is a sub log."
     log.setline
 
     # Or using aliases
