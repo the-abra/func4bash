@@ -36,10 +36,6 @@ function log() {
     echo -e "${RESET_COLOR} [${color}$level${RESET_COLOR}]${color}>${RESET_COLOR} $message"
 }
 
-function log.sub() {
-    echo -e "\t${RESET_COLOR}${COLOR_GENERIC}o \e[0;37m$1" && sleep 0.2
-}
-
 # Log levels
 function log.info() {
     log "INFO" "$COLOR_INFO" "$1"
@@ -55,6 +51,10 @@ function log.error() {
 
 function log.done() {
     log "DONE" "$COLOR_DONE" "$1"
+}
+
+function log.sub() {
+    echo -e "\t${RESET_COLOR}${COLOR_GENERIC}o \e[0;37m$1" && sleep 0.2
 }
 
 function log.setline() {
