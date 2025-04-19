@@ -29,35 +29,40 @@ function log() {
     local color="$2"
     local message="$3"
 
-    echo -e "${RESET_COLOR} [${color}$level${RESET_COLOR}]${color}>${RESET_COLOR} $message"
+    echo -e "${RESET_COLOR}[${color}$level${RESET_COLOR}]${color} - ${RESET_COLOR} $message"
 }
 
 # Log levels
 function log.info() {
-    log "INFO" "$COLOR_INFO" "$1"
+    log "💠 INFO " "$COLOR_INFO" "$1"
 }
 
 function log.warn() {
-    log "WARN" "$COLOR_WARN" "$1"
+    log "⚠️  WARN " "$COLOR_WARN" "$1"
 }
 
 function log.error() {
-    log "ERROR" "$COLOR_ERROR" "$1"
+    log "❌ ERROR" "$COLOR_ERROR" "$1"
 }
 
 function log.done() {
-    log "DONE" "$COLOR_DONE" "$1"
+    log "✅ DONE " "$COLOR_DONE" "$1"
 }
 
 function log.sub() {
-    echo -e "\t${RESET_COLOR}${COLOR_GENERIC}o \e[0;37m$1" && sleep 0.2
+    #echo -e " ${RESET_COLOR}${COLOR_GENERIC}o \e[0;37m$1${RESET_COLOR}"
+    echo -e "  ${RESET_COLOR}🔹 \e[0;37m$1${RESET_COLOR}"
+}
+
+log.hint() {
+    echo -e "\n  ${RESET_COLOR}💡 \e[0;37m$1${RESET_COLOR}\n"
 }
 
 function log.setline() {
     # Get the size of the terminal
     local half=""
     local info=""
-    ! [[ -z $1 ]] && info="/${COLOR_INFO}$1${RESET_COLOR}\\"
+    ! [[ -z $1 ]] && info="/${COLOR_GENERIC}$1${RESET_COLOR}\\ ⚜️  "
     for ((i=1; i<=$(( columns - ${#info} )); i++)); do
         half+="-"
     done
@@ -69,7 +74,7 @@ function log.endline() {
     # Get the size of the terminal
     local half=""
     local info=""
-    ! [[ -z $1 ]] && info="\\${COLOR_DONE}$1${RESET_COLOR}/"
+    ! [[ -z $1 ]] && info="\\\\${COLOR_GENERIC}$1${RESET_COLOR}/ ⚜️  "
     for ((i=1; i<=$(( columns - ${#info} )); i++)); do
         half+="-"
     done
@@ -83,6 +88,7 @@ function log.endline() {
 # log.warn "This is a warning message."
 # log.error "This is an error message."
 # log.done "This task is complete."
+# log.hint "This is a tip message"
 # log.sub "This is a subtask."
 
 # --------------------------------------
