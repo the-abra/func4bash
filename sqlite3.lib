@@ -1,18 +1,62 @@
 #!/bin/bash
-# database.lib - Functions for SQLite database operations
+# sqlite3_improved.lib - Enhanced Functions for SQLite database operations
+# Version 1.0
 
-! command -v sqlite3 &> /dev/null  && echo -e "SQLite3 database is not available on your system" && return 1
+# Check if sqlite3 is available
+if ! command -v sqlite3 &> /dev/null; then
+    echo "Error: SQLite3 is not available on your system" >&2
+    return 1
+fi
 
-# Functions
+# Constants
+readonly SQLITE_LIB_VERSION="1.0.0"
+readonly SQLITE_TIMEOUT=30
+readonly MAX_IDENTIFIER_LENGTH=64
+
+# Internal helper functions
+_validate_sql_identifier() {
+    local identifier="$1"
+    # Allow alphanumeric characters, underscores, hyphens (within reasonable constraints)
+    if [[ $identifier =~ ^[a-zA-Z][a-zA-Z0-9_-]*$ ]] && [ ${#identifier} -le $MAX_IDENTIFIER_LENGTH ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+_escape_sql_values() {
+    local values="$1"
+    # Basic SQL escaping - for production use, consider more robust escaping
+    echo "$values" | sed "s/'/''/g"
+}
+
+# Function to check if table exists
+_table_exists() {
+    local db_file="$1"
+    local table_name="$2"
+    local result
+    result=$(sqlite3 "$db_file" "SELECT name FROM sqlite_master WHERE type='table' AND name='$table_name';" 2>/dev/null)
+    [[ -n "$result" ]]
+}
 
 # Create a new SQLite database file
 sqlite3.create_db() {
     local db_file="$1"
-    if [ -f "$db_file" ]; then
-        echo "Database already exists: $db_file"
+    if [[ -z "$db_file" ]]; then
+        echo "Error: Database file name required" >&2
+        return 1
+    fi
+
+    if [[ -f "$db_file" ]]; then
+        echo "Warning: Database already exists: $db_file" >&2
+        return 1
     else
-        sqlite3 "$db_file" ".databases"
-        echo "Database created: $db_file"
+        if sqlite3 "$db_file" "PRAGMA application_id;" >/dev/null 2>&1; then
+            echo "Database created: $db_file"
+        else
+            echo "Error: Failed to create database: $db_file" >&2
+            return 1
+        fi
     fi
 }
 
@@ -21,21 +65,34 @@ sqlite3.create_table() {
     local db_file="$1"
     local table_name="$2"
     local schema="$3"
+
     if [[ -z "$db_file" || -z "$table_name" || -z "$schema" ]]; then
-        echo "Error: Missing arguments. Usage: create_table <db_file> <table_name> <schema>"
+        echo "Error: Missing arguments. Usage: sqlite3.create_table <db_file> <table_name> <schema>" >&2
         return 1
     fi
-    if ! [[ -z $(sqlite3 "$db_file" ".schema $table_name") ]] &>/dev/null; then
-        echo "Table '$table_name' already exists in '$db_file'."
+
+    # Validate table name and schema
+    if ! _validate_sql_identifier "$table_name"; then
+        echo "Error: Invalid table name: $table_name" >&2
+        return 1
+    fi
+
+    if [[ ${#schema} -gt 1000 ]]; then
+        echo "Error: Schema too long" >&2
+        return 1
+    fi
+
+    if _table_exists "$db_file" "$table_name"; then
+        echo "Table '$table_name' already exists in '$db_file'." >&2
+        return 1
     else
-        if sqlite3 "$db_file" "CREATE TABLE $table_name ($schema);"; then
+        if sqlite3 "$db_file" "CREATE TABLE $table_name ($schema);" 2>/dev/null; then
             echo "Table '$table_name' created successfully in '$db_file'."
         else
-            echo "Error: Failed to create table '$table_name' in '$db_file'."
+            echo "Error: Failed to create table '$table_name' in '$db_file'." >&2
             return 1
         fi
     fi
-
 }
 
 # Insert data into a table
@@ -44,8 +101,38 @@ sqlite3.insert() {
     local table_name="$2"
     local columns="$3"
     local values="$4"
-    sqlite3 "$db_file" "INSERT INTO $table_name ($columns) VALUES ($values);" || exit 1;
-    echo "Data inserted into '$table_name'."
+
+    if [[ -z "$db_file" || -z "$table_name" || -z "$columns" || -z "$values" ]]; then
+        echo "Error: Missing required arguments" >&2
+        return 1
+    fi
+
+    # Validate table name
+    if ! _validate_sql_identifier "$table_name"; then
+        echo "Error: Invalid table name: $table_name" >&2
+        return 1
+    fi
+
+    # Validate columns (basic validation)
+    # Remove spaces and commas temporarily for validation
+    local clean_cols="${columns//, /_}"
+    clean_cols="${clean_cols// /}"
+    if ! _validate_sql_identifier "$clean_cols"; then
+        echo "Error: Invalid column names: $columns" >&2
+        return 1
+    fi
+
+    # Execute the insert command and capture any error
+    if sqlite3 "$db_file" "INSERT INTO \"$table_name\" ($columns) VALUES ($values);" >/dev/null 2>&1; then
+        echo "Data inserted into '$table_name'."
+        return 0
+    else
+        # Execute once more to get the error message (first execution may have side effects)
+        local error_msg
+        error_msg=$(sqlite3 "$db_file" "INSERT INTO \"$table_name\" ($columns) VALUES ($values);" 2>&1)
+        echo "Error: Failed to insert data into '$table_name' in '$db_file': $error_msg" >&2
+        return 1
+    fi
 }
 
 # Query data from a table
@@ -54,59 +141,673 @@ sqlite3.query() {
     local table_name="$2"
     local select="$3"
     local where_clause="$4"
-    
-    [[ -z $select ]] && select="*"
-    [[ -z $where_clause ]] && where_clause="1=1" # No filtering if where_clause is empty
-    
-    sqlite3 "$db_file" "SELECT $select FROM $table_name WHERE $where_clause;"
-}
 
+    # Validate inputs
+    if [[ -z "$db_file" || -z "$table_name" ]]; then
+        echo "Error: Database file and table name are required" >&2
+        return 1
+    fi
+
+    if [[ ! -f "$db_file" ]]; then
+        echo "Error: Database file does not exist: $db_file" >&2
+        return 1
+    fi
+
+    # Validate table name
+    if ! _validate_sql_identifier "$table_name"; then
+        echo "Error: Invalid table name: $table_name" >&2
+        return 1
+    fi
+
+    # Set default values
+    [[ -z $select ]] && select="*"
+    [[ -z $where_clause ]] && where_clause="1=1"
+
+    # Execute query with error capture
+    local result
+    if result=$(sqlite3 "$db_file" "SELECT $select FROM $table_name WHERE $where_clause;" 2>&1); then
+        echo "$result"
+        return 0
+    else
+        echo "Error executing query: $result" >&2
+        return 1
+    fi
+}
 
 # Update data in a table
 sqlite3.update() {
     local db_file="$1"
     local table_name="$2"
-    local where_clause="$3"
-    local set_clause="$4"
-    sqlite3 "$db_file" "UPDATE $table_name SET $set_clause WHERE $where_clause;"
+    local set_clause="$3"
+    local where_clause="$4"
+
+    if [[ -z "$db_file" || -z "$table_name" || -z "$set_clause" ]]; then
+        echo "Error: Missing required arguments for update operation" >&2
+        return 1
+    fi
+
+    # Validate table name
+    if ! _validate_sql_identifier "$table_name"; then
+        echo "Error: Invalid table name: $table_name" >&2
+        return 1
+    fi
+
+    if ! sqlite3 "$db_file" "UPDATE $table_name SET $set_clause WHERE $where_clause;" 2>/dev/null; then
+        echo "Error: Failed to update data in '$table_name' in '$db_file'" >&2
+        return 1
+    fi
+
     echo "Data updated in '$table_name'."
 }
 
-# Delete data from a table
-sqlite3.delete() {
+# Delete data from a table (separate function from file deletion)
+sqlite3.delete_rows() {
     local db_file="$1"
-    if [[ -z $2 ]]; then
-        if rm -f "$db_file" &> /dev/null; then
-            echo -e "$db_file deleted successfully." && return 0
-        else
-            echo -e "$db_file failed to be delete." && return 1
-        fi
-    fi
     local table_name="$2"
     local where_clause="$3"
-    sqlite3 "$db_file" "DELETE FROM $table_name WHERE $where_clause;"
-    echo "Data deleted from '$table_name'."
+
+    if [[ -z "$db_file" || -z "$table_name" ]]; then
+        echo "Error: Database file and table name are required" >&2
+        return 1
+    fi
+
+    if [[ -z "$where_clause" ]]; then
+        echo "Error: WHERE clause is required to prevent accidental deletion of all rows" >&2
+        return 1
+    fi
+
+    # Validate table name
+    if ! _validate_sql_identifier "$table_name"; then
+        echo "Error: Invalid table name: $table_name" >&2
+        return 1
+    fi
+
+    if sqlite3 "$db_file" "DELETE FROM $table_name WHERE $where_clause;" 2>/dev/null; then
+        echo "Data deleted from '$table_name'."
+    else
+        echo "Error: Failed to delete data from '$table_name' in '$db_file'" >&2
+        return 1
+    fi
 }
 
+# Delete the entire database file
+sqlite3.delete_db_file() {
+    local db_file="$1"
 
-# Example usage:
+    if [[ -z "$db_file" ]]; then
+        echo "Error: Database file name required" >&2
+        return 1
+    fi
+
+    if rm -f "$db_file" 2>/dev/null; then
+        echo "$db_file deleted successfully."
+    else
+        echo "$db_file failed to be deleted." >&2
+        return 1
+    fi
+}
+
+# Transaction support for multiple operations
+sqlite3.transaction() {
+    local db_file="$1"
+    shift
+    local sql_commands="$*"
+
+    if [[ -z "$db_file" || -z "$sql_commands" ]]; then
+        echo "Error: Database file and SQL commands required for transaction" >&2
+        return 1
+    fi
+
+    if [[ ! -f "$db_file" ]]; then
+        echo "Error: Database file does not exist: $db_file" >&2
+        return 1
+    fi
+
+    # Wrap multiple operations in a transaction
+    local result
+    if result=$(sqlite3 "$db_file" "BEGIN TRANSACTION; $sql_commands; COMMIT;" 2>&1); then
+        echo "Transaction completed successfully"
+        return 0
+    else
+        echo "Transaction failed, rolled back: $result" >&2
+        return 1
+    fi
+}
+
+# Database integrity check
+sqlite3.check_integrity() {
+    local db_file="$1"
+
+    if [[ -z "$db_file" ]]; then
+        echo "Error: Database file name required" >&2
+        return 1
+    fi
+
+    if [[ ! -f "$db_file" ]]; then
+        echo "Error: Database file does not exist: $db_file" >&2
+        return 1
+    fi
+
+    local result
+    if result=$(sqlite3 "$db_file" "PRAGMA integrity_check;" 2>&1); then
+        if [[ "$result" == "ok" ]]; then
+            echo "Integrity check passed for: $db_file"
+            return 0
+        else
+            echo "Integrity check failed for: $db_file" >&2
+            echo "$result" >&2
+            return 1
+        fi
+    else
+        echo "Error checking integrity: $result" >&2
+        return 1
+    fi
+}
+
+# List all tables in the database
+sqlite3.list_tables() {
+    local db_file="$1"
+
+    if [[ -z "$db_file" ]]; then
+        echo "Error: Database file name required" >&2
+        return 1
+    fi
+
+    if [[ ! -f "$db_file" ]]; then
+        echo "Error: Database file does not exist: $db_file" >&2
+        return 1
+    fi
+
+    local result
+    if result=$(sqlite3 "$db_file" "SELECT name FROM sqlite_master WHERE type='table';" 2>&1); then
+        echo "$result"
+        return 0
+    else
+        echo "Error listing tables: $result" >&2
+        return 1
+    fi
+}
+
+# Add a column to an existing table
+sqlite3.add_column() {
+    local db_file="$1"
+    local table_name="$2"
+    local column_def="$3"
+
+    if [[ -z "$db_file" || -z "$table_name" || -z "$column_def" ]]; then
+        echo "Error: Missing required arguments. Usage: sqlite3.add_column <db_file> <table_name> <column_definition>" >&2
+        return 1
+    fi
+
+    # Validate table name
+    if ! _validate_sql_identifier "$table_name"; then
+        echo "Error: Invalid table name: $table_name" >&2
+        return 1
+    fi
+
+    # Validate column definition (basic validation)
+    if [[ ${#column_def} -gt 200 ]]; then
+        echo "Error: Column definition too long" >&2
+        return 1
+    fi
+
+    # Check if table exists
+    if ! _table_exists "$db_file" "$table_name"; then
+        echo "Error: Table '$table_name' does not exist in '$db_file'" >&2
+        return 1
+    fi
+
+    # Attempt to add the column
+    if sqlite3 "$db_file" "ALTER TABLE \"$table_name\" ADD COLUMN $column_def;" 2>/dev/null; then
+        echo "Column added to '$table_name' in '$db_file'."
+    else
+        echo "Error: Failed to add column to '$table_name' in '$db_file'" >&2
+        return 1
+    fi
+}
+
+# Remove a column from an existing table (SQLite limitation workaround)
+sqlite3.remove_column() {
+    local db_file="$1"
+    local table_name="$2"
+    local column_name="$3"
+
+    if [[ -z "$db_file" || -z "$table_name" || -z "$column_name" ]]; then
+        echo "Error: Missing required arguments. Usage: sqlite3.remove_column <db_file> <table_name> <column_name>" >&2
+        return 1
+    fi
+
+    # Validate table name and column name
+    if ! _validate_sql_identifier "$table_name"; then
+        echo "Error: Invalid table name: $table_name" >&2
+        return 1
+    fi
+
+    if ! _validate_sql_identifier "$column_name"; then
+        echo "Error: Invalid column name: $column_name" >&2
+        return 1
+    fi
+
+    # Check if table exists
+    if ! _table_exists "$db_file" "$table_name"; then
+        echo "Error: Table '$table_name' does not exist in '$db_file'" >&2
+        return 1
+    fi
+
+    # Get the table schema
+    local table_info
+    if ! table_info=$(sqlite3 "$db_file" "PRAGMA table_info($table_name);" 2>/dev/null); then
+        echo "Error: Could not get table info for '$table_name'" >&2
+        return 1
+    fi
+
+    # Check if column exists
+    if ! echo "$table_info" | grep -q "$column_name"; then
+        echo "Error: Column '$column_name' does not exist in table '$table_name'" >&2
+        return 1
+    fi
+
+    # Get current column info to rebuild the table
+    local column_info
+    if ! column_info=$(sqlite3 "$db_file" "PRAGMA table_info('$table_name');" 2>/dev/null); then
+        echo "Error: Could not get detailed column info for '$table_name'" >&2
+        return 1
+    fi
+
+    # In SQLite, we need to recreate the table without the column
+    # First, create a temporary table with the same structure
+    local temp_table_name="${table_name}_temp"
+
+    # Build the new schema excluding the column to be removed
+    local new_columns=()
+    while IFS='|' read -r cid name type notnull dflt_value pk; do
+        if [[ "$name" != "$column_name" ]]; then
+            local notnull_str=""
+            if [[ "$notnull" == "1" ]]; then
+                notnull_str="NOT NULL"
+            fi
+            local default_str=""
+            if [[ -n "$dflt_value" ]]; then
+                default_str="DEFAULT '$dflt_value'"
+            fi
+            local pk_str=""
+            if [[ "$pk" == "1" ]]; then
+                pk_str="PRIMARY KEY"
+            fi
+            new_columns+=("$name $type $notnull_str $default_str $pk_str")
+        fi
+    done < <(echo "$column_info")
+
+    local new_schema=$(IFS=", "; echo "${new_columns[*]}")
+    new_schema=${new_schema//  / }  # Remove extra spaces
+
+    # Create temporary table with new schema
+    if ! sqlite3 "$db_file" "CREATE TABLE \"$temp_table_name\" ($new_schema);" 2>/dev/null; then
+        echo "Error: Could not create temporary table '$temp_table_name'" >&2
+        return 1
+    fi
+
+    # Copy data from old table to new table (excluding the removed column)
+    local existing_columns=""
+    local first=1
+    while IFS='|' read -r cid name type notnull dflt_value pk; do
+        if [[ "$name" != "$column_name" ]]; then
+            if [[ $first -eq 1 ]]; then
+                existing_columns="$name"
+                first=0
+            else
+                existing_columns="$existing_columns, $name"
+            fi
+        fi
+    done < <(echo "$column_info")
+
+    if [[ -n "$existing_columns" ]]; then
+        if ! sqlite3 "$db_file" "INSERT INTO \"$temp_table_name\" SELECT $existing_columns FROM \"$table_name\";" 2>/dev/null; then
+            echo "Error: Could not copy data to temporary table" >&2
+            # Clean up temp table on error
+            sqlite3 "$db_file" "DROP TABLE IF EXISTS \"$temp_table_name\";" 2>/dev/null
+            return 1
+        fi
+    fi
+
+    # Drop original table
+    if ! sqlite3 "$db_file" "DROP TABLE \"$table_name\";" 2>/dev/null; then
+        echo "Error: Could not drop original table '$table_name'" >&2
+        sqlite3 "$db_file" "DROP TABLE IF EXISTS \"$temp_table_name\";" 2>/dev/null
+        return 1
+    fi
+
+    # Rename temp table to original table name
+    if ! sqlite3 "$db_file" "ALTER TABLE \"$temp_table_name\" RENAME TO \"$table_name\";" 2>/dev/null; then
+        echo "Error: Could not rename temporary table back to original name" >&2
+        # Try to restore by recreating original table if possible
+        return 1
+    fi
+
+    echo "Column '$column_name' removed from '$table_name' in '$db_file'."
+}
+
+# Create an index on a table
+sqlite3.create_index() {
+    local db_file="$1"
+    local index_name="$2"
+    local table_name="$3"
+    local column_name="$4"
+    local unique_flag="$5"  # Optional: pass "UNIQUE" to create a unique index
+
+    if [[ -z "$db_file" || -z "$index_name" || -z "$table_name" || -z "$column_name" ]]; then
+        echo "Error: Missing required arguments. Usage: sqlite3.create_index <db_file> <index_name> <table_name> <column_name> [UNIQUE]" >&2
+        return 1
+    fi
+
+    # Validate names
+    if ! _validate_sql_identifier "$index_name"; then
+        echo "Error: Invalid index name: $index_name" >&2
+        return 1
+    fi
+
+    if ! _validate_sql_identifier "$table_name"; then
+        echo "Error: Invalid table name: $table_name" >&2
+        return 1
+    fi
+
+    if ! _validate_sql_identifier "$column_name"; then
+        echo "Error: Invalid column name: $column_name" >&2
+        return 1
+    fi
+
+    # Check if table exists
+    if ! _table_exists "$db_file" "$table_name"; then
+        echo "Error: Table '$table_name' does not exist in '$db_file'" >&2
+        return 1
+    fi
+
+    local unique_clause=""
+    if [[ "$unique_flag" == "UNIQUE" ]]; then
+        unique_clause="UNIQUE"
+    fi
+
+    if sqlite3 "$db_file" "CREATE $unique_clause INDEX IF NOT EXISTS \"$index_name\" ON \"$table_name\" (\"$column_name\");" 2>/dev/null; then
+        echo "Index '$index_name' created on '$table_name'.'$column_name' in '$db_file'."
+    else
+        echo "Error: Failed to create index '$index_name' on '$table_name'.'$column_name' in '$db_file'" >&2
+        return 1
+    fi
+}
+
+# Get information about table structure
+sqlite3.table_info() {
+    local db_file="$1"
+    local table_name="$2"
+
+    if [[ -z "$db_file" || -z "$table_name" ]]; then
+        echo "Error: Database file and table name are required" >&2
+        return 1
+    fi
+
+    if [[ ! -f "$db_file" ]]; then
+        echo "Error: Database file does not exist: $db_file" >&2
+        return 1
+    fi
+
+    if ! _validate_sql_identifier "$table_name"; then
+        echo "Error: Invalid table name: $table_name" >&2
+        return 1
+    fi
+
+    # Check if table exists
+    if ! _table_exists "$db_file" "$table_name"; then
+        echo "Error: Table '$table_name' does not exist in '$db_file'" >&2
+        return 1
+    fi
+
+    local result
+    if result=$(sqlite3 "$db_file" "PRAGMA table_info('$table_name');" 2>/dev/null); then
+        echo "Information for table '$table_name':"
+        echo -e "cid\tname\ttype\tnotnull\tdefault\tpk"
+        echo "$result"
+    else
+        echo "Error getting table info for '$table_name' in '$db_file'" >&2
+        return 1
+    fi
+}
+
+# Get list of indexes for a table
+sqlite3.list_indexes() {
+    local db_file="$1"
+    local table_name="$2"
+
+    if [[ -z "$db_file" ]]; then
+        echo "Error: Database file is required" >&2
+        return 1
+    fi
+
+    if [[ ! -f "$db_file" ]]; then
+        echo "Error: Database file does not exist: $db_file" >&2
+        return 1
+    fi
+
+    local result
+    if [[ -n "$table_name" ]]; then
+        if ! _validate_sql_identifier "$table_name"; then
+            echo "Error: Invalid table name: $table_name" >&2
+            return 1
+        fi
+
+        # Get indexes for specific table
+        if result=$(sqlite3 "$db_file" "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='$table_name';" 2>/dev/null); then
+            echo "Indexes for table '$table_name':"
+            echo "$result"
+        else
+            echo "Error getting indexes for table '$table_name' in '$db_file'" >&2
+            return 1
+        fi
+    else
+        # Get all indexes in database
+        if result=$(sqlite3 "$db_file" "SELECT name FROM sqlite_master WHERE type='index';" 2>/dev/null); then
+            echo "All indexes in database:"
+            echo "$result"
+        else
+            echo "Error getting indexes from '$db_file'" >&2
+            return 1
+        fi
+    fi
+}
+
+# Create a view
+sqlite3.create_view() {
+    local db_file="$1"
+    local view_name="$2"
+    local query="$3"
+
+    if [[ -z "$db_file" || -z "$view_name" || -z "$query" ]]; then
+        echo "Error: Missing required arguments. Usage: sqlite3.create_view <db_file> <view_name> <select_query>" >&2
+        return 1
+    fi
+
+    if ! _validate_sql_identifier "$view_name"; then
+        echo "Error: Invalid view name: $view_name" >&2
+        return 1
+    fi
+
+    if [[ ${#query} -gt 5000 ]]; then
+        echo "Error: Query too long" >&2
+        return 1
+    fi
+
+    # Basic validation: ensure query starts with SELECT
+    if [[ ! "$query" =~ ^[Ss][Ee][Ll][Ee][Cc][Tt][[:space:]] ]]; then
+        echo "Error: Query must be a SELECT statement" >&2
+        return 1
+    fi
+
+    if sqlite3 "$db_file" "CREATE VIEW IF NOT EXISTS \"$view_name\" AS $query;" 2>/dev/null; then
+        echo "View '$view_name' created in '$db_file'."
+    else
+        echo "Error: Failed to create view '$view_name' in '$db_file'" >&2
+        return 1
+    fi
+}
+
+# Get database statistics
+sqlite3.db_stats() {
+    local db_file="$1"
+
+    if [[ -z "$db_file" ]]; then
+        echo "Error: Database file is required" >&2
+        return 1
+    fi
+
+    if [[ ! -f "$db_file" ]]; then
+        echo "Error: Database file does not exist: $db_file" >&2
+        return 1
+    fi
+
+    echo "Database statistics for: $db_file"
+    echo "File size: $(ls -lh "$db_file" | awk '{print $5}')"
+
+    # Count tables
+    local table_count
+    table_count=$(sqlite3 "$db_file" "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';" 2>/dev/null)
+    echo "Number of tables: $table_count"
+
+    # Count indexes
+    local index_count
+    index_count=$(sqlite3 "$db_file" "SELECT COUNT(*) FROM sqlite_master WHERE type='index';" 2>/dev/null)
+    echo "Number of indexes: $index_count"
+
+    # Count views
+    local view_count
+    view_count=$(sqlite3 "$db_file" "SELECT COUNT(*) FROM sqlite_master WHERE type='view';" 2>/dev/null)
+    echo "Number of views: $view_count"
+
+    # List tables with row counts
+    echo "Table row counts:"
+    local tables
+    tables=$(sqlite3 "$db_file" "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';" 2>/dev/null)
+
+    while IFS= read -r table_name; do
+        if [[ -n "$table_name" ]]; then
+            local row_count
+            row_count=$(sqlite3 "$db_file" "SELECT COUNT(*) FROM \"$table_name\";" 2>/dev/null)
+            echo "  $table_name: $row_count rows"
+        fi
+    done < <(echo "$tables")
+}
+
+# Vacuum the database (reclaim space and optimize)
+sqlite3.vacuum() {
+    local db_file="$1"
+
+    if [[ -z "$db_file" ]]; then
+        echo "Error: Database file is required" >&2
+        return 1
+    fi
+
+    if [[ ! -f "$db_file" ]]; then
+        echo "Error: Database file does not exist: $db_file" >&2
+        return 1
+    fi
+
+    # Store original size
+    local original_size
+    original_size=$(stat -c%s "$db_file" 2>/dev/null)
+
+    if sqlite3 "$db_file" "VACUUM;" 2>/dev/null; then
+        local new_size
+        new_size=$(stat -c%s "$db_file" 2>/dev/null)
+        local saved_space=$((original_size - new_size))
+
+        echo "Database vacuumed successfully."
+        echo "Space reclaimed: $((saved_space / 1024)) KB"
+    else
+        echo "Error: Failed to vacuum database '$db_file'" >&2
+        return 1
+    fi
+}
+
+# Test function demonstrating the improved functionality
 sqlite3.test() {
- local db="example.db"
- sqlite3.create_db       "$db"
- sqlite3.create_table    "$db" "users" "id INTEGER PRIMARY KEY, name TEXT, age INTEGER"
- sqlite3.insert          "$db" "users" "name, age" "'John Doe', 30"
- sqlite3.query           "$db" 'users' '*' 'id=1'
- sqlite3.update          "$db" "users" "name='John Doe'" "age=60"
- sqlite3.query           "$db" 'users' '*' 'id=1'
- sqlite3.delete          "$db" "users" "name='John Doe'"
- sqlite3.delete          "$db"
+    local db="example_improved.db"
+
+    echo "Running test with improved functions..."
+
+    # Create database
+    sqlite3.create_db "$db" || exit 1
+
+    # Create table
+    sqlite3.create_table "$db" "users" "id INTEGER PRIMARY KEY, name TEXT, age INTEGER" || exit 1
+
+    # Insert data
+    sqlite3.insert "$db" "users" "name, age" "'John Doe', 30" || exit 1
+    sqlite3.insert "$db" "users" "name, age" "'Jane Smith', 25" || exit 1
+
+    # Query data
+    echo "All users:"
+    sqlite3.query "$db" 'users' || exit 1
+
+    echo "User with ID 1:"
+    sqlite3.query "$db" 'users' '*' 'id=1' || exit 1
+
+    # Update data
+    sqlite3.update "$db" "users" "age=60" "name='John Doe'" || exit 1
+
+    echo "After update:"
+    sqlite3.query "$db" 'users' '*' 'id=1' || exit 1
+
+    # Test add_column functionality
+    sqlite3.add_column "$db" "users" "email TEXT" || exit 1
+    sqlite3.update "$db" "users" "email='john@example.com'" "name='John Doe'" || exit 1
+    echo "Users after adding email column:"
+    sqlite3.query "$db" 'users' || exit 1
+
+    # Test remove_column functionality (this will recreate the table)
+    sqlite3.remove_column "$db" "users" "email" || exit 1
+    echo "Users after removing email column:"
+    sqlite3.query "$db" 'users' || exit 1
+
+    # Delete data
+    sqlite3.delete_rows "$db" "users" "name='John Doe'" || exit 1
+
+    echo "Remaining users:"
+    sqlite3.query "$db" 'users' || exit 1
+
+    # Check integrity
+    sqlite3.check_integrity "$db" || exit 1
+
+    # Clean up
+    sqlite3.delete_db_file "$db" || exit 1
+
+    echo "Test completed successfully!"
+}
+
+# Configuration function
+sqlite3.config_set() {
+    local option="$1"
+    local value="$2"
+
+    case "$option" in
+        "timeout")
+            if [[ $value =~ ^[0-9]+$ ]]; then
+                SQLITE_TIMEOUT="$value"
+                echo "Timeout set to $value seconds"
+            else
+                echo "Error: Timeout value must be a number" >&2
+                return 1
+            fi
+            ;;
+        *)
+            echo "Error: Unknown configuration option: $option" >&2
+            return 1
+            ;;
+    esac
 }
 
 # Display usage information for the SQLite functions
 sqlite3.usage() {
-    echo "Usage: source sqlite3.lib"
+    echo "Usage: source sqlite3_improved.lib"
     echo
-    echo "Available functions:"
+    echo "Enhanced SQLite functions for bash:"
     echo
     echo "  sqlite3.create_db <db_file>"
     echo "      Creates a new SQLite database file."
@@ -127,14 +828,62 @@ sqlite3.usage() {
     echo "      Updates data in a table in the SQLite database."
     echo "      Example: sqlite3.update example.db users 'age=31' 'name=\"John Doe\"'"
     echo
-    echo "  sqlite3.delete <db_file> <table_name> <where_clause>"
+    echo "  sqlite3.delete_rows <db_file> <table_name> <where_clause>"
     echo "      Deletes data from a table in the SQLite database."
-    echo "      Example: sqlite3.delete example.db users 'name=\"John Doe\"'"
+    echo "      Example: sqlite3.delete_rows example.db users 'name=\"John Doe\"'"
     echo
-    echo "  sqlite3.delete <db_file>"
+    echo "  sqlite3.delete_db_file <db_file>"
     echo "      Deletes the SQLite database file."
     echo
-    echo "  sqlite3.test"
-    echo "      Runs a test to demonstrate the functions."
+    echo "  sqlite3.transaction <db_file> <sql_commands>"
+    echo "      Executes multiple SQL commands in a transaction."
+    echo "      Example: sqlite3.transaction example.db 'INSERT INTO users VALUES (1, \"Test\", 25); UPDATE users SET age=26 WHERE id=1;'"
     echo
-}
+    echo "  sqlite3.check_integrity <db_file>"
+    echo "      Checks database integrity."
+    echo
+    echo "  sqlite3.list_tables <db_file>"
+    echo "      Lists all tables in the database."
+    echo
+    echo "  sqlite3.add_column <db_file> <table_name> <column_definition>"
+    echo "      Adds a column to an existing table."
+    echo "      Example: sqlite3.add_column example.db users 'phone TEXT DEFAULT NULL'"
+    echo
+    echo "  sqlite3.remove_column <db_file> <table_name> <column_name>"
+    echo "      Removes a column from an existing table (recreates table)."
+    echo "      Example: sqlite3.remove_column example.db users phone"
+    echo
+    echo "  sqlite3.create_index <db_file> <index_name> <table_name> <column_name> [UNIQUE]"
+    echo "      Creates an index on a table column."
+    echo "      Example: sqlite3.create_index example.db idx_users_name users name"
+    echo "      Example with unique constraint: sqlite3.create_index example.db idx_users_email users email UNIQUE"
+    echo
+    echo "  sqlite3.table_info <db_file> <table_name>"
+    echo "      Shows structure information for a table."
+    echo "      Example: sqlite3.table_info example.db users"
+    echo
+    echo "  sqlite3.list_indexes <db_file> [table_name]"
+    echo "      Lists indexes in the database or for a specific table."
+    echo "      Example: sqlite3.list_indexes example.db"
+    echo "      Example: sqlite3.list_indexes example.db users"
+    echo
+    echo "  sqlite3.create_view <db_file> <view_name> <select_query>"
+    echo "      Creates a view based on a SELECT query."
+    echo "      Example: sqlite3.create_view example.db user_view \"SELECT id, name FROM users WHERE age > 18\""
+    echo
+    echo "  sqlite3.db_stats <db_file>"
+    echo "      Shows database statistics including tables, indexes, and row counts."
+    echo "      Example: sqlite3.db_stats example.db"
+    echo
+    echo "  sqlite3.vacuum <db_file>"
+    echo "      Optimizes the database file and reclaims unused space."
+    echo "      Example: sqlite3.vacuum example.db"
+    echo
+    echo "  sqlite3.test"
+    echo "      Runs a comprehensive test to demonstrate the functions."
+    echo
+    echo "  sqlite3.config_set <option> <value>"
+    echo "      Sets configuration options (currently only 'timeout')."
+    echo
+    echo "Version: $SQLITE_LIB_VERSION"
+}%                          
