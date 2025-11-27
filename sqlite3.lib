@@ -802,88 +802,101 @@ sqlite3.config_set() {
             ;;
     esac
 }
-
-# Display usage information for the SQLite functions
 sqlite3.usage() {
-    echo "Usage: source sqlite3_improved.lib"
+    # Define colors
+    local RED="\033[0;31m"
+    local GREEN="\033[0;32m"
+    local YELLOW="\033[1;33m"
+    local BLUE="\033[0;34m"
+    local PURPLE="\033[0;35m"
+    local CYAN="\033[0;36m"
+    local BOLD="\033[1m"
+    local NC="\033[0m" # No Color
+
+    echo -e "${CYAN}${BOLD}╔══════════════════════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}${BOLD}║                             SQLite3 Improved Library                        ║${NC}"
+    echo -e "${CYAN}${BOLD}╚══════════════════════════════════════════════════════════════════════════════╝${NC}"
+    echo -e "${YELLOW}Usage:${NC} source sqlite3_improved.lib"
     echo
-    echo "Enhanced SQLite functions for bash:"
+    echo -e "${GREEN}${BOLD}Enhanced SQLite functions for bash:${NC}"
     echo
-    echo "  sqlite3.create_db <db_file>"
-    echo "      Creates a new SQLite database file."
+    echo -e "  ${BLUE}sqlite3.create_db${NC} ${PURPLE}<db_file>${NC}"
+    echo -e "      ${CYAN}Creates a new SQLite database file.${NC}"
     echo
-    echo "  sqlite3.create_table <db_file> <table_name> <schema>"
-    echo "      Creates a new table in the SQLite database."
-    echo "      Example: sqlite3.create_table example.db users 'id INTEGER PRIMARY KEY, name TEXT, age INTEGER'"
+    echo -e "  ${BLUE}sqlite3.create_table${NC} ${PURPLE}<db_file> <table_name> <schema>${NC}"
+    echo -e "      ${CYAN}Creates a new table in the SQLite database.${NC}"
+    echo -e "      ${YELLOW}Example:${NC} sqlite3.create_table example.db users 'id INTEGER PRIMARY KEY, name TEXT, age INTEGER'"
     echo
-    echo "  sqlite3.insert <db_file> <table_name> <columns> <values>"
-    echo "      Inserts data into a table in the SQLite database."
-    echo "      Example: sqlite3.insert example.db users 'name, age' \"'John Doe', 30\""
+    echo -e "  ${BLUE}sqlite3.insert${NC} ${PURPLE}<db_file> <table_name> <columns> <values>${NC}"
+    echo -e "      ${CYAN}Inserts data into a table in the SQLite database.${NC}"
+    echo -e "      ${YELLOW}Example:${NC} sqlite3.insert example.db users 'name, age' \"'John Doe', 30\""
     echo
-    echo "  sqlite3.query <db_file> <table_name> [select] [where_clause]"
-    echo "      Queries data from a table in the SQLite database."
-    echo "      Example: sqlite3.query example.db users '*' 'id=1'"
+    echo -e "  ${BLUE}sqlite3.query${NC} ${PURPLE}<db_file> <table_name> [select] [where_clause]${NC}"
+    echo -e "      ${CYAN}Queries data from a table in the SQLite database.${NC}"
+    echo -e "      ${YELLOW}Example:${NC} sqlite3.query example.db users '*' 'id=1'"
     echo
-    echo "  sqlite3.update <db_file> <table_name> <set_clause> <where_clause>"
-    echo "      Updates data in a table in the SQLite database."
-    echo "      Example: sqlite3.update example.db users 'age=31' 'name=\"John Doe\"'"
+    echo -e "  ${BLUE}sqlite3.update${NC} ${PURPLE}<db_file> <table_name> <set_clause> <where_clause>${NC}"
+    echo -e "      ${CYAN}Updates data in a table in the SQLite database.${NC}"
+    echo -e "      ${YELLOW}Example:${NC} sqlite3.update example.db users 'age=31' 'name=\"John Doe\"'"
     echo
-    echo "  sqlite3.delete_rows <db_file> <table_name> <where_clause>"
-    echo "      Deletes data from a table in the SQLite database."
-    echo "      Example: sqlite3.delete_rows example.db users 'name=\"John Doe\"'"
+    echo -e "  ${BLUE}sqlite3.delete_rows${NC} ${PURPLE}<db_file> <table_name> <where_clause>${NC}"
+    echo -e "      ${CYAN}Deletes data from a table in the SQLite database.${NC}"
+    echo -e "      ${YELLOW}Example:${NC} sqlite3.delete_rows example.db users 'name=\"John Doe\"'"
     echo
-    echo "  sqlite3.delete_db_file <db_file>"
-    echo "      Deletes the SQLite database file."
+    echo -e "  ${BLUE}sqlite3.delete_db_file${NC} ${PURPLE}<db_file>${NC}"
+    echo -e "      ${CYAN}Deletes the SQLite database file.${NC}"
     echo
-    echo "  sqlite3.transaction <db_file> <sql_commands>"
-    echo "      Executes multiple SQL commands in a transaction."
-    echo "      Example: sqlite3.transaction example.db 'INSERT INTO users VALUES (1, \"Test\", 25); UPDATE users SET age=26 WHERE id=1;'"
+    echo -e "  ${BLUE}sqlite3.transaction${NC} ${PURPLE}<db_file> <sql_commands>${NC}"
+    echo -e "      ${CYAN}Executes multiple SQL commands in a transaction.${NC}"
+    echo -e "      ${YELLOW}Example:${NC} sqlite3.transaction example.db 'INSERT INTO users VALUES (1, \"Test\", 25); UPDATE users SET age=26 WHERE id=1;'"
     echo
-    echo "  sqlite3.check_integrity <db_file>"
-    echo "      Checks database integrity."
+    echo -e "  ${BLUE}sqlite3.check_integrity${NC} ${PURPLE}<db_file>${NC}"
+    echo -e "      ${CYAN}Checks database integrity.${NC}"
     echo
-    echo "  sqlite3.list_tables <db_file>"
-    echo "      Lists all tables in the database."
+    echo -e "  ${BLUE}sqlite3.list_tables${NC} ${PURPLE}<db_file>${NC}"
+    echo -e "      ${CYAN}Lists all tables in the database.${NC}"
     echo
-    echo "  sqlite3.add_column <db_file> <table_name> <column_definition>"
-    echo "      Adds a column to an existing table."
-    echo "      Example: sqlite3.add_column example.db users 'phone TEXT DEFAULT NULL'"
+    echo -e "  ${BLUE}sqlite3.add_column${NC} ${PURPLE}<db_file> <table_name> <column_definition>${NC}"
+    echo -e "      ${CYAN}Adds a column to an existing table.${NC}"
+    echo -e "      ${YELLOW}Example:${NC} sqlite3.add_column example.db users 'phone TEXT DEFAULT NULL'"
     echo
-    echo "  sqlite3.remove_column <db_file> <table_name> <column_name>"
-    echo "      Removes a column from an existing table (recreates table)."
-    echo "      Example: sqlite3.remove_column example.db users phone"
+    echo -e "  ${BLUE}sqlite3.remove_column${NC} ${PURPLE}<db_file> <table_name> <column_name>${NC}"
+    echo -e "      ${CYAN}Removes a column from an existing table (recreates table).${NC}"
+    echo -e "      ${YELLOW}Example:${NC} sqlite3.remove_column example.db users phone"
     echo
-    echo "  sqlite3.create_index <db_file> <index_name> <table_name> <column_name> [UNIQUE]"
-    echo "      Creates an index on a table column."
-    echo "      Example: sqlite3.create_index example.db idx_users_name users name"
-    echo "      Example with unique constraint: sqlite3.create_index example.db idx_users_email users email UNIQUE"
+    echo -e "  ${BLUE}sqlite3.create_index${NC} ${PURPLE}<db_file> <index_name> <table_name> <column_name> [UNIQUE]${NC}"
+    echo -e "      ${CYAN}Creates an index on a table column.${NC}"
+    echo -e "      ${YELLOW}Example:${NC} sqlite3.create_index example.db idx_users_name users name"
+    echo -e "      ${YELLOW}Example with unique constraint:${NC} sqlite3.create_index example.db idx_users_email users email UNIQUE"
     echo
-    echo "  sqlite3.table_info <db_file> <table_name>"
-    echo "      Shows structure information for a table."
-    echo "      Example: sqlite3.table_info example.db users"
+    echo -e "  ${BLUE}sqlite3.table_info${NC} ${PURPLE}<db_file> <table_name>${NC}"
+    echo -e "      ${CYAN}Shows structure information for a table.${NC}"
+    echo -e "      ${YELLOW}Example:${NC} sqlite3.table_info example.db users"
     echo
-    echo "  sqlite3.list_indexes <db_file> [table_name]"
-    echo "      Lists indexes in the database or for a specific table."
-    echo "      Example: sqlite3.list_indexes example.db"
-    echo "      Example: sqlite3.list_indexes example.db users"
+    echo -e "  ${BLUE}sqlite3.list_indexes${NC} ${PURPLE}<db_file> [table_name]${NC}"
+    echo -e "      ${CYAN}Lists indexes in the database or for a specific table.${NC}"
+    echo -e "      ${YELLOW}Example:${NC} sqlite3.list_indexes example.db"
+    echo -e "      ${YELLOW}Example:${NC} sqlite3.list_indexes example.db users"
     echo
-    echo "  sqlite3.create_view <db_file> <view_name> <select_query>"
-    echo "      Creates a view based on a SELECT query."
-    echo "      Example: sqlite3.create_view example.db user_view \"SELECT id, name FROM users WHERE age > 18\""
+    echo -e "  ${BLUE}sqlite3.create_view${NC} ${PURPLE}<db_file> <view_name> <select_query>${NC}"
+    echo -e "      ${CYAN}Creates a view based on a SELECT query.${NC}"
+    echo -e "      ${YELLOW}Example:${NC} sqlite3.create_view example.db user_view \"SELECT id, name FROM users WHERE age > 18\""
     echo
-    echo "  sqlite3.db_stats <db_file>"
-    echo "      Shows database statistics including tables, indexes, and row counts."
-    echo "      Example: sqlite3.db_stats example.db"
+    echo -e "  ${BLUE}sqlite3.db_stats${NC} ${PURPLE}<db_file>${NC}"
+    echo -e "      ${CYAN}Shows database statistics including tables, indexes, and row counts.${NC}"
+    echo -e "      ${YELLOW}Example:${NC} sqlite3.db_stats example.db"
     echo
-    echo "  sqlite3.vacuum <db_file>"
-    echo "      Optimizes the database file and reclaims unused space."
-    echo "      Example: sqlite3.vacuum example.db"
+    echo -e "  ${BLUE}sqlite3.vacuum${NC} ${PURPLE}<db_file>${NC}"
+    echo -e "      ${CYAN}Optimizes the database file and reclaims unused space.${NC}"
+    echo -e "      ${YELLOW}Example:${NC} sqlite3.vacuum example.db"
     echo
-    echo "  sqlite3.test"
-    echo "      Runs a comprehensive test to demonstrate the functions."
+    echo -e "  ${BLUE}sqlite3.test${NC}"
+    echo -e "      ${CYAN}Runs a comprehensive test to demonstrate the functions.${NC}"
     echo
-    echo "  sqlite3.config_set <option> <value>"
-    echo "      Sets configuration options (currently only 'timeout')."
+    echo -e "  ${BLUE}sqlite3.config_set${NC} ${PURPLE}<option> <value>${NC}"
+    echo -e "      ${CYAN}Sets configuration options (currently only 'timeout').${NC}"
     echo
-    echo "Version: $SQLITE_LIB_VERSION"
-}%                          
+    echo -e "${CYAN}${BOLD}┌─────────────────────────────────────────────────────────────────────────────┐${NC}"
+    echo -e "${CYAN}${BOLD}│                    Version: ${GREEN}${BOLD}$SQLITE_LIB_VERSION${CYAN}${BOLD}                                               │${NC}"
+    echo -e "${CYAN}${BOLD}└─────────────────────────────────────────────────────────────────────────────┘${NC}"
+}%                        
